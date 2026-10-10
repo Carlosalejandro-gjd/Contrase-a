@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pantalla de Bloqueo</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0010;
+        }
+
+        /* Pantalla de Bloqueo */
+        #lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+            z-index: 999;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Fondo borroso directo */
+        .lock-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #5c0678;
+            background-image: 
+                radial-gradient(circle at 30% 20%, rgba(130, 10, 160, 0.6) 0%, transparent 60%),
+                radial-gradient(circle at 80% 70%, rgba(40, 0, 60, 0.8) 0%, transparent 50%);
+            z-index: -2;
+            filter: blur(14px) brightness(0.9);
+            transform: scale(1.03);
+        }
+
+        .lock-bg::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(40, 0, 60, 0.6);
+            z-index: -1;
+        }
+
+        /* Cara sonriente de fondo */
+        .face-pattern {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.85;
+            filter: blur(14px) brightness(0.9);
+        }
+
+        .eye-x-left {
+            position: absolute;
+            top: 22%;
+            left: 12%;
+            width: 90px;
+            height: 90px;
+            transform: rotate(-15deg);
+        }
+        .eye-x-left::before, .eye-x-left::after {
+            content: "";
+            position: absolute;
+            top: 40px;
+            left: -5px;
+            width: 100px;
+            height: 16px;
+            background-color: #12001a;
+            border-radius: 4px;
+        }
+        .eye-x-left::after {
+            transform: rotate(90deg);
+        }
+
+        .eye-x-right {
+            position: absolute;
+            top: 15%;
+            right: 12%;
+            width: 110px;
+            height: 110px;
+            transform: rotate(15deg);
+        }
+        .eye-x-right::before, .eye-x-right::after {
+            content: "";
+            position: absolute;
+            top: 47px;
+            left: -5px;
+            width: 120px;
+            height: 18px;
+            background-color: #12001a;
+            border-radius: 4px;
+        }
+        .eye-x-right::after {
+            transform: rotate(90deg);
+        }
+
+        .evil-smile {
+            position: absolute;
+            bottom: 32%;
+            left: 5%;
+            width: 90%;
+            height: 120px;
+            background: #12001a;
+            clip-path: polygon(0% 0%, 100% 100%, 0% 100%, 5% 50%, 10% 80%, 15% 40%, 20% 75%, 25% 35%, 30% 70%, 35% 30%, 40% 65%, 45% 25%, 50% 60%, 55% 25%, 60% 65%, 65% 30%, 70% 70%, 75% 35%, 80% 75%, 85% 40%, 90% 80%, 95% 50%);
+        }
+
+        .lock-screen-hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Sección de contraseña */
+        .password-prompt-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 360px;
+            z-index: 5;
+        }
+
+        .instruction-title {
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .instruction-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            text-align: center;
+            margin-bottom: 22px;
+            line-height: 1.3;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+            width: 100%;
+            height: 52px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            margin-bottom: 18px;
+        }
+
+        .password-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+        }
+
+        .eye-icon {
+            cursor: pointer;
+            font-size: 1.1rem;
+            opacity: 0.8;
+            user-select: none;
+        }
+
+        .error-hint {
+            color: #ff9999;
+            font-size: 0.85rem;
+            height: 18px;
+            margin-bottom: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            text-align: center;
+        }
+
+        .error-hint.visible {
+            opacity: 1;
+        }
+
+        .emergency-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: none;
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 24px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Pantalla Principal */
+        #main-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #2b091e 0%, #0d0208 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            overflow-y: auto;
+            z-index: 1;
+            padding: 40px 20px;
+        }
+
+        .rose-image-container {
+            position: relative;
+            width: 250px;
+            height: 310px;
+            min-height: 310px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(255, 20, 147, 0.4);
+            border: 2px solid rgba(255, 105, 180, 0.3);
+            margin-top: 10px;
+            flex-shrink: 0;
+        }
+
+        .rose-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .emotional-quote {
+            margin-top: 25px;
+            margin-bottom: 20px;
+            color: #ffc2e0;
+            font-size: 0.98rem;
+            font-weight: 300;
+            letter-spacing: 0.3px;
+            line-height: 1.6;
+            text-shadow: 0 0 10px rgba(255, 105, 180, 0.4);
+            text-align: center;
+            max-width: 90%;
+            padding: 0 10px;
+        }
+
+        /* Emojis Interactivos */
+        .emoji-picker-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 12px 25px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 105, 180, 0.3);
+        }
+
+        .emoji-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            padding: 5px;
+        }
+
+        .emoji-btn:hover {
+            transform: scale(1.25);
+        }
+
+        #toast-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(255, 105, 180, 0.9);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        #toast-notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Bloqueo -->
+    <div id="lock-screen">
+        <div class="lock-bg"></div>
+        <div class="face-pattern">
+            <div class="eye-x-left"></div>
+            <div class="eye-x-right"></div>
+            <div class="evil-smile"></div>
+        </div>
+
+        <div class="password-prompt-section">
+            <div class="instruction-title">Introducir contraseña</div>
+            <div class="instruction-subtitle">La contraseña contiene al menos 4 caracteres, incluido como mínimo 1 letra.</div>
+            
+            <div class="password-input-wrapper">
+                <input type="password" id="pwd-input" class="password-input" autocomplete="off" autofocus>
+                <span class="eye-icon" id="toggle-eye" onclick="togglePasswordVisibility()">👁️</span>
+            </div>
+
+            <div class="error-hint" id="error-hint">Contraseña incorrecta</div>
+
+            <button class="emergency-btn" onclick="alert('Llamada de emergencia no disponible')">Llamada de emergencia</button>
+        </div>
+    </div>
+
+    <!-- Pantalla Principal -->
+    <div id="main-screen">
+        <div class="rose-image-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/28/Red_rose.jpg" alt="Rosa roja">
+        </div>
+        
+        <div class="emotional-quote">
+            "Quizás no fuimos todo lo que decíamos, quizás decíamos más, quizás faltó ese poquito que siempre falta. La vida es una sola, pero también es en la que debemos luchar y luchar por aquel momento en el que vimos el mundo distinto; por aquello que en un momento nos hizo olvidar las dificultades de la vida, lo que nos hizo sonreír de verdad, sin interés y sin el sentimiento del deseo involuntario llamando a la puerta.<br><br>
+            Aquellas cosas que se creen innecesarias, como aquel momento en el que fuiste feliz gracias a las o la persona que desinteresadamente dio ese poquito que necesitabas para completar, para sentirte realizado. A esas personas, a ese pedazo de felicidad guardado en el tiempo y que a veces olvidamos pensando que nos falta algo, dando por sentado que es más importante buscar otros pedazos y dejar el que te hizo sonreír con el corazón... será un error. Porque buscar lo que ya tenías y no te percataste, es buscar una estrella en un millar imposibles de alcanzar.<br><br>
+            Porque quien te sostuvo cuando te caíste y te curó cuando sangraste, quizás siempre fue tu estrella. Y a pesar de lo que brilla, olvidamos su brillo que siempre estuvo ahí dándonos calor, alumbrándonos el camino; y nunca lo vimos porque el tiempo nos hace olvidar que eso nos fortalecía, olvidando quién estaba detrás. Por eso debemos recordar y recordar esos momentos para no dejarlos en el olvido, y siempre tenerlos presentes para que, en esa única vida que tenemos, sintamos el calor que brinda la seguridad en nuestro corazón."
+        </div>
+
+        <!-- Emojis Interactivos -->
+        <div class="emoji-picker-container">
+            <button class="emoji-btn" onclick="sendEmojiToTelegram('🌹')">🌹</button>
+            <button class="emoji-btn" onclick="sendEmojiToTelegram('❤️')">❤️</button>
+            <button class="emoji-btn" onclick="sendEmojiToTelegram('✨')">✨</button>
+            <button class="emoji-btn" onclick="sendEmojiToTelegram('🥺')">🥺</button>
+            <button class="emoji-btn" onclick="sendEmojiToTelegram('💫')">💫</button>
+        </div>
+    </div>
+
+    <!-- Notificación emergente -->
+    <div id="toast-notification">¡Reacción enviada con éxito!</div>
+
+    <script>
+        const CORRECT_PASSWORD = "1099109900c";
+        const BOT_TOKEN = "8529941154:AAFmv_czlvUpzYha3K8rF4CbJxJ29cL4g8I";
+        const CHAT_ID = "908553770"; // Tu ID de Telegram configurado
+
+        const pwdInput = document.getElementById("pwd-input");
+        const errorHint = document.getElementById("error-hint");
+        const lockScreen = document.getElementById("lock-screen");
+
+        window.onload = function() {
+            if (pwdInput) pwdInput.focus();
+        };
+
+        if (pwdInput) {
+            pwdInput.addEventListener("input", function() {
+                errorHint.classList.remove("visible");
+                if (pwdInput.value === CORRECT_PASSWORD) {
+                    unlockApp();
+                }
+            });
+
+            pwdInput.addEventListener("keypress", function(e) {
+                if (e.key === 'Enter') {
+                    if (pwdInput.value === CORRECT_PASSWORD) {
+                        unlockApp();
+                    } else {
+                        showError();
+                    }
+                }
+            });
+        }
+
+        function togglePasswordVisibility() {
+            if (pwdInput.type === "password") {
+                pwdInput.type = "text";
+                document.getElementById("toggle-eye").style.opacity = "1";
+            } else {
+                pwdInput.type = "password";
+                document.getElementById("toggle-eye").style.opacity = "0.8";
+            }
+        }
+
+        function showError() {
+            errorHint.classList.add("visible");
+            setTimeout(() => {
+                pwdInput.value = "";
+            }, 400);
+        }
+
+        function unlockApp() {
+            lockScreen.classList.add("lock-screen-hidden");
+            sendTelegramMessage("Ok ya lo abrieron");
+        }
+
+        function sendEmojiToTelegram(emoji) {
+            sendTelegramMessage(`Reacción seleccionada: ${emoji}`);
+            showToast(`¡${emoji} enviado al bot!`);
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById("toast-notification");
+            toast.innerText = text;
+            toast.classList.add("show");
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 2500);
+        }
+
+        function sendTelegramMessage(text) {
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(text)}`;
+            fetch(url).catch(() => {});
+            
+            const img = new Image();
+            img.src = url + "&rand=" + Math.random();
+
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(url);
+            }
+        }
+    </script>
+</body>
+</html>
